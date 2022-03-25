@@ -41,6 +41,37 @@ func ExampleQueue() {
 	// second
 }
 
+func ExampleWithContext() {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	q := queue.WithContext[int](ctx)
+	defer q.Close()
+
+	err := q.Add(42)
+	if err != nil {
+		panic(err)
+	}
+
+	value, err := q.Remove()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(value)
+
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		cancel()
+	}()
+
+	// this will block until the cancel call above
+	_, err = q.Remove()
+
+	fmt.Println(err)
+	// Output:
+	// 42
+	// context canceled
+}
+
 func TestQueue(t *testing.T) {
 	q := queue.WithContext[string](context.Background())
 	defer q.Close()

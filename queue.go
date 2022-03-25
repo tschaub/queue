@@ -6,7 +6,7 @@ import (
 
 // Queue provides a thread-safe, slice-backed queue.
 //
-// The queue is bound in the was as slices (you can append until exhausing memory).
+// The queue is bound in the same way as slices (you can append until exhausing memory).
 // The zero value is not a valid Queue.  Use the WithContext method to create a new queue.
 type Queue[T any] struct {
 	buffer         []T
