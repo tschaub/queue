@@ -4,6 +4,10 @@ import (
 	"context"
 )
 
+// Queue provides a thread-safe, slice-backed queue.
+//
+// The queue is bound in the was as slices (you can append until exhausing memory).
+// The zero value is not a valid Queue.  Use the WithContext method to create a new queue.
 type Queue[T any] struct {
 	buffer         []T
 	ctx            context.Context
@@ -38,6 +42,7 @@ func (q *Queue[T]) releaseRemoveLock() {
 	<-q.removeLock
 }
 
+// WithContext returns a new queue associated with the given context.
 func WithContext[T any](ctx context.Context) *Queue[T] {
 	q := &Queue[T]{
 		ctx:            ctx,
@@ -49,6 +54,9 @@ func WithContext[T any](ctx context.Context) *Queue[T] {
 	return q
 }
 
+// Add inserts an item into the queue.
+//
+// If the context's Done channel is closed, Add will return an error (e.g. context.Canceled or context.DeadlineExceeded).
 func (q *Queue[T]) Add(item T) error {
 	if err := q.acquireAddLock(); err != nil {
 		return err
@@ -61,6 +69,10 @@ func (q *Queue[T]) Add(item T) error {
 	return nil
 }
 
+// Remove returns an item from the queue.
+//
+// If the queue is empty, the method will block until an item is added to the queue or the context's Done channel is closed.
+// If the context's Done channel is closed, Remove will return an error (e.g. context.Canceled or context.DeadlineExceeded).
 func (q *Queue[T]) Remove() (T, error) {
 	zero := *new(T)
 	if err := q.acquireRemoveLock(); err != nil {
@@ -93,6 +105,7 @@ func (q *Queue[T]) Remove() (T, error) {
 	return item, nil
 }
 
+// Close makes it so the queue can no longer be used.
 func (q *Queue[T]) Close() {
 	close(q.addLock)
 	close(q.removeLock)
