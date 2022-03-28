@@ -1,4 +1,4 @@
-The github.com/tschaub/queue module is distributed under the MIT license. Find the full source here: http://tschaub.mit-license.org/
+The github.com/tschaub/workgroup module is distributed under the MIT license. Find the full source here: http://tschaub.mit-license.org/
 
 Copyright Tim Schaub.
 
