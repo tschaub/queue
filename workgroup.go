@@ -41,7 +41,7 @@ func (w *Worker[T]) waitOnBatch() error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	group, groupCtx := limited.WithContext(ctx, int64(w.Limit+1))
+	group, groupCtx := limited.WithContext(ctx, w.Limit+1)
 	err := group.Go(func() error {
 		for len(w.buffer) > 0 {
 			w.mutex.Lock()

@@ -1,4 +1,4 @@
-github.com/tschaub/limited v0.0.0-20220324210045-ede77735f600 h1:/IgR8U8zAPEEsVkOSIgbOAIqNcmkZEXu7NA3cbpxcAM=
-github.com/tschaub/limited v0.0.0-20220324210045-ede77735f600/go.mod h1:MpOH3bHLpfI+6MO7P1DulWY4aXXqKdkUn8v4eMm4xOI=
+github.com/tschaub/limited v0.1.0 h1:KXgfq7r2F+E8RVeCDeMDYihoyU40RPYYxB51YWcfyE4=
+github.com/tschaub/limited v0.1.0/go.mod h1:MpOH3bHLpfI+6MO7P1DulWY4aXXqKdkUn8v4eMm4xOI=
 golang.org/x/sync v0.0.0-20210220032951-036812b2e83c h1:5KslGYwFpkhGh+Q16bwMP3cOontH8FOep7tGV86Y7SQ=
 golang.org/x/sync v0.0.0-20210220032951-036812b2e83c/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
