@@ -5,8 +5,8 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.7.1 h1:5TQK59W5E3v0r2duFAb7P95B6hEeOyEnHRa8MjYSMTY=
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/tschaub/limited v0.1.0 h1:KXgfq7r2F+E8RVeCDeMDYihoyU40RPYYxB51YWcfyE4=
-github.com/tschaub/limited v0.1.0/go.mod h1:MpOH3bHLpfI+6MO7P1DulWY4aXXqKdkUn8v4eMm4xOI=
+github.com/tschaub/limited v0.2.0 h1:XBjhp4JNhRruzRlU4/RCLGxxSmRPO+rJelpB5EVZYJU=
+github.com/tschaub/limited v0.2.0/go.mod h1:MpOH3bHLpfI+6MO7P1DulWY4aXXqKdkUn8v4eMm4xOI=
 golang.org/x/sync v0.0.0-20210220032951-036812b2e83c h1:5KslGYwFpkhGh+Q16bwMP3cOontH8FOep7tGV86Y7SQ=
 golang.org/x/sync v0.0.0-20210220032951-036812b2e83c/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=

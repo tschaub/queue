@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/stretchr/testify v1.7.1
-	github.com/tschaub/limited v0.1.0
+	github.com/tschaub/limited v0.2.0
 )
 
 require (
