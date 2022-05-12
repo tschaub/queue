@@ -14,7 +14,7 @@ import (
 )
 
 func ExampleWorker() {
-	worker := workgroup.New(workgroup.Options[string]{
+	worker := workgroup.New(&workgroup.Options[string]{
 		Work: func(w *workgroup.Worker[string], data string) error {
 			if len(data) == 0 {
 				return nil
@@ -56,7 +56,7 @@ func ExampleWorker() {
 func ExampleWorker_context() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	worker := workgroup.New(workgroup.Options[string]{
+	worker := workgroup.New(&workgroup.Options[string]{
 		Context: ctx,
 		Work: func(w *workgroup.Worker[string], data string) error {
 			if len(data) == 3 {
@@ -98,7 +98,7 @@ func TestWorker(t *testing.T) {
 	visited := sync.Map{}
 	letters := "abcdefghijklmnopqrstuvwxyz"
 
-	worker := workgroup.New(workgroup.Options[string]{
+	worker := workgroup.New(&workgroup.Options[string]{
 		Work: func(w *workgroup.Worker[string], data string) error {
 			assert.NotNil(t, w.Context())
 			visited.Store(data, true)
@@ -125,7 +125,7 @@ func TestWorkerError(t *testing.T) {
 
 	expectedErr := errors.New("expected")
 
-	worker := workgroup.New(workgroup.Options[string]{
+	worker := workgroup.New(&workgroup.Options[string]{
 		Limit: 10,
 		Work: func(w *workgroup.Worker[string], data string) error {
 			if data == "f" {
@@ -151,7 +151,7 @@ func TestWorkerContextCancelBeforeWait(t *testing.T) {
 
 	letters := "abcdefghijklmnopqrstuvwxyz"
 
-	worker := workgroup.New(workgroup.Options[string]{
+	worker := workgroup.New(&workgroup.Options[string]{
 		Context: ctx,
 		Limit:   10,
 		Work: func(w *workgroup.Worker[string], data string) error {
@@ -183,7 +183,7 @@ func TestWorkerLimit(t *testing.T) {
 	visited := sync.Map{}
 	letters := "abcdefghijklmnopqrstuvwxyz"
 
-	worker := workgroup.New(workgroup.Options[string]{
+	worker := workgroup.New(&workgroup.Options[string]{
 		Limit: 5,
 		Work: func(w *workgroup.Worker[string], data string) error {
 			visited.Store(data, true)
@@ -211,7 +211,7 @@ func TestWorkerRecursive(t *testing.T) {
 	visited := sync.Map{}
 	letters := "abcdefghijklmnopqrstuvwxyz"
 
-	worker := workgroup.New(workgroup.Options[string]{
+	worker := workgroup.New(&workgroup.Options[string]{
 		Limit: 1,
 		Work: func(w *workgroup.Worker[string], data string) error {
 			if len(data) == 1 {
@@ -241,7 +241,7 @@ func TestWorkerRecursiveLimit(t *testing.T) {
 	visited := sync.Map{}
 	letters := "abcdefghijklmnopqrstuvwxyz"
 
-	worker := workgroup.New(workgroup.Options[string]{
+	worker := workgroup.New(&workgroup.Options[string]{
 		Limit: 4,
 		Work: func(w *workgroup.Worker[string], data string) error {
 			if len(data) == 1 {

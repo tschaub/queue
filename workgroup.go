@@ -32,7 +32,7 @@ type Options[T any] struct {
 }
 
 // New creates a new worker.
-func New[T any](opts Options[T]) *Worker[T] {
+func New[T any](opts *Options[T]) *Worker[T] {
 	worker := &Worker[T]{
 		ctx:   opts.Context,
 		limit: opts.Limit,
