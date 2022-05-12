@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tschaub/workgroup"
 )
 
 func ExampleWorker() {
-	worker := &workgroup.Worker[string]{
-		Limit: 1,
+	worker := workgroup.New(workgroup.Options[string]{
 		Work: func(w *workgroup.Worker[string], data string) error {
 			if len(data) == 0 {
 				return nil
@@ -25,15 +25,21 @@ func ExampleWorker() {
 			time.Sleep(10 * time.Millisecond)
 
 			// spawn more work
-			w.Add(data[1:])
+			err := w.Add(data[1:])
+			if err != nil {
+				fmt.Printf("unexpected errror: %s\n", err)
+			}
 
 			return nil
 		},
+	})
+
+	err := worker.Add("abcdef")
+	if err != nil {
+		fmt.Printf("unexpected errror: %s\n", err)
 	}
 
-	worker.Add("abcdef")
-
-	err := worker.Wait()
+	err = worker.Wait()
 	if err != nil {
 		fmt.Printf("unexpected errror: %s\n", err)
 	}
@@ -50,9 +56,8 @@ func ExampleWorker() {
 func ExampleWorker_context() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	worker := &workgroup.Worker[string]{
+	worker := workgroup.New(workgroup.Options[string]{
 		Context: ctx,
-		Limit:   1,
 		Work: func(w *workgroup.Worker[string], data string) error {
 			if len(data) == 3 {
 				cancel()
@@ -64,15 +69,21 @@ func ExampleWorker_context() {
 			time.Sleep(10 * time.Millisecond)
 
 			// spawn more work
-			w.Add(data[1:])
+			err := w.Add(data[1:])
+			if err != nil {
+				fmt.Printf("unexpected errror: %s\n", err)
+			}
 
 			return nil
 		},
+	})
+
+	err := worker.Add("abcdef")
+	if err != nil {
+		fmt.Printf("unexpected errror: %s\n", err)
 	}
 
-	worker.Add("abcdef")
-
-	err := worker.Wait()
+	err = worker.Wait()
 	if err != nil {
 		fmt.Printf("unexpected errror: %s\n", err)
 	}
@@ -87,17 +98,17 @@ func TestWorker(t *testing.T) {
 	visited := sync.Map{}
 	letters := "abcdefghijklmnopqrstuvwxyz"
 
-	worker := &workgroup.Worker[string]{
-		Limit: 1,
+	worker := workgroup.New(workgroup.Options[string]{
 		Work: func(w *workgroup.Worker[string], data string) error {
-			assert.NotNil(t, w.GroupContext())
+			assert.NotNil(t, w.Context())
 			visited.Store(data, true)
 			return nil
 		},
-	}
+	})
 
 	for i := 0; i < len(letters); i++ {
-		worker.Add(letters[i : i+1])
+		err := worker.Add(letters[i : i+1])
+		require.NoError(t, err)
 	}
 
 	err := worker.Wait()
@@ -114,7 +125,7 @@ func TestWorkerError(t *testing.T) {
 
 	expectedErr := errors.New("expected")
 
-	worker := &workgroup.Worker[string]{
+	worker := workgroup.New(workgroup.Options[string]{
 		Limit: 10,
 		Work: func(w *workgroup.Worker[string], data string) error {
 			if data == "f" {
@@ -122,10 +133,10 @@ func TestWorkerError(t *testing.T) {
 			}
 			return nil
 		},
-	}
+	})
 
 	for i := 0; i < len(letters); i++ {
-		worker.Add(letters[i : i+1])
+		require.NoError(t, worker.Add(letters[i:i+1]))
 	}
 
 	err := worker.Wait()
@@ -140,17 +151,17 @@ func TestWorkerContextCancelBeforeWait(t *testing.T) {
 
 	letters := "abcdefghijklmnopqrstuvwxyz"
 
-	worker := &workgroup.Worker[string]{
+	worker := workgroup.New(workgroup.Options[string]{
 		Context: ctx,
 		Limit:   10,
 		Work: func(w *workgroup.Worker[string], data string) error {
 			return nil
 		},
-	}
+	})
 
 	for i := 0; i < len(letters); i++ {
 		letter := letters[i : i+1]
-		worker.Add(letter)
+		require.NoError(t, worker.Add(letter))
 		if letter == "f" {
 			cancel()
 		}
@@ -172,16 +183,16 @@ func TestWorkerLimit(t *testing.T) {
 	visited := sync.Map{}
 	letters := "abcdefghijklmnopqrstuvwxyz"
 
-	worker := &workgroup.Worker[string]{
+	worker := workgroup.New(workgroup.Options[string]{
 		Limit: 5,
 		Work: func(w *workgroup.Worker[string], data string) error {
 			visited.Store(data, true)
 			return nil
 		},
-	}
+	})
 
 	for i := 0; i < len(letters); i++ {
-		worker.Add(letters[i : i+1])
+		require.NoError(t, worker.Add(letters[i:i+1]))
 	}
 
 	err := worker.Wait()
@@ -200,7 +211,7 @@ func TestWorkerRecursive(t *testing.T) {
 	visited := sync.Map{}
 	letters := "abcdefghijklmnopqrstuvwxyz"
 
-	worker := &workgroup.Worker[string]{
+	worker := workgroup.New(workgroup.Options[string]{
 		Limit: 1,
 		Work: func(w *workgroup.Worker[string], data string) error {
 			if len(data) == 1 {
@@ -209,13 +220,13 @@ func TestWorkerRecursive(t *testing.T) {
 			}
 
 			half := len(data) / 2
-			w.Add(data[:half])
-			w.Add(data[half:])
+			require.NoError(t, w.Add(data[:half]))
+			require.NoError(t, w.Add(data[half:]))
 			return nil
 		},
-	}
+	})
 
-	worker.Add(letters)
+	require.NoError(t, worker.Add(letters))
 
 	err := worker.Wait()
 	assert.NoError(t, err)
@@ -230,7 +241,7 @@ func TestWorkerRecursiveLimit(t *testing.T) {
 	visited := sync.Map{}
 	letters := "abcdefghijklmnopqrstuvwxyz"
 
-	worker := &workgroup.Worker[string]{
+	worker := workgroup.New(workgroup.Options[string]{
 		Limit: 4,
 		Work: func(w *workgroup.Worker[string], data string) error {
 			if len(data) == 1 {
@@ -239,13 +250,13 @@ func TestWorkerRecursiveLimit(t *testing.T) {
 			}
 
 			for i := 0; i < len(data); i++ {
-				w.Add(data[i : i+1])
+				require.NoError(t, w.Add(data[i:i+1]))
 			}
 			return nil
 		},
-	}
+	})
 
-	worker.Add(letters)
+	require.NoError(t, worker.Add(letters))
 
 	err := worker.Wait()
 	assert.NoError(t, err)

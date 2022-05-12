@@ -2,38 +2,69 @@ package workgroup
 
 import (
 	"context"
-	"sync"
 
 	"github.com/tschaub/limited"
 )
 
+// WorkFunc is called by the worker with task data.  The work function receives a pointer to the
+// worker so that it can add additional task data.
 type WorkFunc[T any] func(*Worker[T], T) error
 
+// Worker executes a group of tasks that may grow over time.
 type Worker[T any] struct {
-	Context  context.Context
-	Limit    int
-	Work     WorkFunc[T]
+	ctx      context.Context
+	limit    int
+	queue    Queue[T]
+	work     WorkFunc[T]
 	groupCtx context.Context
-	buffer   []T
-	mutex    *sync.Mutex
 }
 
-func (w *Worker[T]) GroupContext() context.Context {
+// Options for constructing a new worker.  Only the Work function is required.  No more than the Limit
+// number of tasks will be executed concurrently.
+//
+// By default, a limit of 1 is used and an in-memory queue is used.  You can provide your own queue
+// that implements the Queue interface.
+type Options[T any] struct {
+	Context context.Context
+	Limit   int
+	Queue   Queue[T]
+	Work    WorkFunc[T]
+}
+
+// New creates a new worker.
+func New[T any](opts Options[T]) *Worker[T] {
+	worker := &Worker[T]{
+		ctx:   opts.Context,
+		limit: opts.Limit,
+		queue: opts.Queue,
+		work:  opts.Work,
+	}
+
+	if worker.ctx == nil {
+		worker.ctx = context.Background()
+	}
+	if worker.limit <= 0 {
+		worker.limit = 1
+	}
+	if worker.queue == nil {
+		worker.queue = newSliceQueue[T]()
+	}
+	return worker
+}
+
+// Context returns the group context while tasks are being executed.
+func (w *Worker[T]) Context() context.Context {
 	return w.groupCtx
 }
 
-func (w *Worker[T]) Add(data T) {
-	if w.mutex == nil {
-		w.mutex = &sync.Mutex{}
-	}
-
-	w.mutex.Lock()
-	w.buffer = append(w.buffer, data)
-	w.mutex.Unlock()
+// Add queues up additional task data.
+func (w *Worker[T]) Add(data T) error {
+	return w.queue.Add(w.ctx, data)
 }
 
+// Wait blocks until all tasks have been executed.
 func (w *Worker[T]) Wait() error {
-	for len(w.buffer) > 0 {
+	for w.queue.HasNext(w.ctx) {
 		if err := w.waitOnBatch(); err != nil {
 			return err
 		}
@@ -42,27 +73,25 @@ func (w *Worker[T]) Wait() error {
 }
 
 func (w *Worker[T]) waitOnBatch() error {
-	ctx := w.Context
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	group, groupCtx := limited.WithContext(ctx, w.Limit+1)
+	group, groupCtx := limited.WithContext(w.ctx, w.limit+1)
 	w.groupCtx = groupCtx
 	err := group.Go(func() error {
-		for len(w.buffer) > 0 {
-			w.mutex.Lock()
-			item := w.buffer[0]
-			w.buffer = w.buffer[1:]
-			w.mutex.Unlock()
+		for {
+			data, nextErr := w.queue.Next(w.ctx)
+			if nextErr != nil {
+				if nextErr == ErrEmptyQueue {
+					return nil
+				}
+				return nextErr
+			}
 
 			err := group.Go(func() error {
-				return w.Work(w, item)
+				return w.work(w, data)
 			})
 			if err != nil {
 				return err
 			}
 		}
-		return nil
 	})
 	if err != nil {
 		return err
