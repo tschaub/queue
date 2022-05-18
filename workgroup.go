@@ -47,7 +47,7 @@ func New[T any](opts *Options[T]) *Worker[T] {
 		worker.limit = 1
 	}
 	if worker.queue == nil {
-		worker.queue = newSliceQueue[T]()
+		worker.queue = NewDefaultQueue[T]()
 	}
 	return worker
 }
