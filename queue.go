@@ -24,25 +24,26 @@ type Queue[T any] interface {
 	HasNext(ctx context.Context) bool
 }
 
-type sliceQueue[T any] struct {
+type defaultQueue[T any] struct {
 	buffer []T
 	mutex  *sync.Mutex
 }
 
-func newSliceQueue[T any]() *sliceQueue[T] {
-	return &sliceQueue[T]{
+// NewDefaultQueue returns an in-memory queue.  Workgroups created without a queue will get one of these.
+func NewDefaultQueue[T any]() *defaultQueue[T] {
+	return &defaultQueue[T]{
 		mutex: &sync.Mutex{},
 	}
 }
 
-func (q *sliceQueue[T]) Add(ctx context.Context, data T) error {
+func (q *defaultQueue[T]) Add(ctx context.Context, data T) error {
 	q.mutex.Lock()
 	q.buffer = append(q.buffer, data)
 	q.mutex.Unlock()
 	return nil
 }
 
-func (q *sliceQueue[T]) Next(ctx context.Context) (T, error) {
+func (q *defaultQueue[T]) Next(ctx context.Context) (T, error) {
 	q.mutex.Lock()
 	if len(q.buffer) == 0 {
 		q.mutex.Unlock()
@@ -54,8 +55,8 @@ func (q *sliceQueue[T]) Next(ctx context.Context) (T, error) {
 	return data, nil
 }
 
-func (q *sliceQueue[T]) HasNext(ctx context.Context) bool {
+func (q *defaultQueue[T]) HasNext(ctx context.Context) bool {
 	return len(q.buffer) > 0
 }
 
-var _ Queue[interface{}] = (*sliceQueue[interface{}])(nil)
+var _ Queue[interface{}] = (*defaultQueue[interface{}])(nil)

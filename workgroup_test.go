@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tschaub/workgroup"
+	"golang.org/x/sync/errgroup"
 )
 
 func ExampleWorker() {
@@ -263,6 +264,157 @@ func TestWorkerRecursiveLimit(t *testing.T) {
 
 	for i := 0; i < len(letters); i++ {
 		_, ok := visited.Load(letters[i : i+1])
+		assert.True(t, ok)
+	}
+}
+
+func TestWorkersSharedQueue(t *testing.T) {
+	ctx, done := context.WithCancel(context.Background())
+	defer done()
+
+	next := make(chan struct{})
+
+	queue := workgroup.NewDefaultQueue[string]()
+
+	visited := sync.Map{}
+	letters := "abcdefghijklmnopqrstuvwxyz"
+
+	firstWorker := workgroup.New(&workgroup.Options[string]{
+		Queue: queue,
+		Work: func(w *workgroup.Worker[string], data string) error {
+			if _, exists := visited.LoadOrStore(data, true); exists {
+				return fmt.Errorf("duplicate: %s", data)
+			}
+
+			if len(data) < len(letters)/2 {
+				// stop doing work to simulate a worker getting taken down
+				for {
+					select {
+					case next <- struct{}{}:
+						// start the next worker
+					case <-ctx.Done():
+						return nil
+					}
+				}
+			}
+
+			return nil
+		},
+	})
+
+	secondWorker := workgroup.New(&workgroup.Options[string]{
+		Queue: queue,
+		Work: func(w *workgroup.Worker[string], data string) error {
+			if _, exists := visited.LoadOrStore(data, true); exists {
+				return fmt.Errorf("duplicate: %s", data)
+			}
+
+			return nil
+		},
+	})
+
+	for i := 0; i < len(letters); i++ {
+		require.NoError(t, firstWorker.Add(letters[0:len(letters)-i]))
+	}
+
+	group := errgroup.Group{}
+	group.Go(func() error {
+		return firstWorker.Wait()
+	})
+
+	group.Go(func() error {
+		<-next
+		err := secondWorker.Wait()
+		if err != nil {
+			return err
+		}
+		done()
+		return nil
+	})
+
+	assert.NoError(t, group.Wait())
+
+	for i := 1; i < len(letters); i++ {
+		_, ok := visited.Load(letters[0:i])
+		assert.True(t, ok)
+	}
+}
+
+func TestWorkersRecursiveSharedQueue(t *testing.T) {
+	ctx, done := context.WithCancel(context.Background())
+	defer done()
+
+	next := make(chan struct{})
+
+	queue := workgroup.NewDefaultQueue[string]()
+
+	visited := sync.Map{}
+	letters := "abcdefghijklmnopqrstuvwxyz"
+
+	firstWorker := workgroup.New(&workgroup.Options[string]{
+		Queue: queue,
+		Work: func(w *workgroup.Worker[string], data string) error {
+			if _, exists := visited.LoadOrStore(data, true); exists {
+				return fmt.Errorf("duplicate: %s", data)
+			}
+
+			err := w.Add(data[:len(data)-1])
+			if err != nil {
+				return err
+			}
+
+			if len(data) < len(letters)/2 {
+				// stop doing work to simulate a worker getting taken down
+				for {
+					select {
+					case next <- struct{}{}:
+						// start the next worker
+					case <-ctx.Done():
+						return nil
+					}
+				}
+			}
+
+			return nil
+		},
+	})
+
+	secondWorker := workgroup.New(&workgroup.Options[string]{
+		Queue: queue,
+		Work: func(w *workgroup.Worker[string], data string) error {
+			if _, exists := visited.LoadOrStore(data, true); exists {
+				return fmt.Errorf("duplicate: %s", data)
+			}
+
+			if len(data) == 1 {
+				return nil
+			}
+
+			return w.Add(data[:len(data)-1])
+		},
+	})
+
+	require.NoError(t, firstWorker.Add(letters))
+
+	group := errgroup.Group{}
+	group.Go(func() error {
+		return firstWorker.Wait()
+	})
+
+	group.Go(func() error {
+		<-next
+		err := secondWorker.Wait()
+		if err != nil {
+			return err
+		}
+		done()
+		return nil
+	})
+
+	assert.NoError(t, group.Wait())
+
+	for i := 1; i < len(letters); i++ {
+		_, ok := visited.Load(letters[0:i])
 		assert.True(t, ok)
 	}
 }
